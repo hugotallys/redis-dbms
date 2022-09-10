@@ -1,0 +1,16 @@
+{
+  "name": "redis-node-client",
+  "version": "1.0.0",
+  "description": "Testing connection with Redis server.",
+  "main": "redisApp.js",
+  "scripts": {
+    "test": "node redisTest.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@camaro/redis": "^2.4.1",
+    "redis": "^4.3.1"
+  },
+  "type": "module"
+}
