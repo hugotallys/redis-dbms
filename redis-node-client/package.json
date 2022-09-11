@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@camaro/redis": "^2.4.1",
+    "chalk": "^5.0.1",
     "redis": "^4.3.1"
   },
   "type": "module"
