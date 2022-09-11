@@ -1,5 +1,18 @@
 import { createClient } from 'redis';
 
+const keypress = async () => {
+    process.stdin.setRawMode(true)
+    return new Promise(
+        resolve => process.stdin.once('data', (key) => {
+            if ( key.indexOf('q') == 0 || key.indexOf('Q') == 0 ) {
+            process.exit();
+            }
+            process.stdin.setRawMode(false)
+            resolve()
+        })
+    )
+}
+
 function parseConnectionInfo(connInfo) {
     const obj = {};
     connInfo = connInfo.replace('\n', '').split(' ').map((d) => d.split('='));
@@ -14,8 +27,11 @@ function command(cmd) {
     return client.sendCommand(cmd.split(' '));
 }
 
-async function response(resp) {
+async function response(resp, freeze=true) {
     console.log(`    ${resp}`);
+    if (freeze) {
+        await keypress();
+    }
 }
 
 const client = createClient();
@@ -29,12 +45,13 @@ let connInfo = parseConnectionInfo(
 );
 
 console.log(
-    `\n--> Servidor rodando no endereço ${connInfo.laddr}\n\n--> Base de dados selecionada é db=${connInfo.db}`
+    `\n--> Servidor rodando no endereço ${connInfo.laddr}\n\n--> Base de dados selecionada é db=${connInfo.db}\n`
 );
 
+console.log('\n[ pressione qualquer tecla para continuar, (q) para sair ]\n')
 console.log('\n--> Resetando a base de dados atual');
 let msg = await command('FLUSHDB');
-response(msg);
+await response(msg);
 
 let stations = [
     { key: 'stations:ca', value: { longitude: -122.27652, latitude: 37.805186, member: 'station:1' } },
@@ -46,51 +63,54 @@ let stations = [
 console.log('\n--> Adicionando registros na base de dados.');
 for (const station of stations) {
     let int = await command(`GEOADD ${station.key} ${station.value.longitude} ${station.value.latitude} ${station.value.member}`);
-    response(`(integer ${int})`);
+    await response(`(integer ${int})`, false);
 }
+await response('');
 
 console.log('\n--> Atualizando longitude do membro station:2 (índice stations:ca)');
 stations[1].value.longitude = -stations[1].value.longitude;
 let int = await command(`GEOADD ${stations[1].key} ${stations[1].value.longitude} ${stations[1].value.latitude} ${stations[1].value.member}`);
-response(`(integer ${int})`);
+await response(`(integer ${int})`);
 
 console.log('\n--> Renomeando índices');
 for (let name of ['ca', 'ny']) {
     let oldName = `stations:${name}`;
     let newName = `stations:electric:${name}`;
     let msg = await command(`RENAME ${oldName} ${newName}`);
-    response(msg);
+    await response(msg, false);
 }
+await response('');
 
 console.log('\n--> Realizando consultas');
 let pos = await command('GEOPOS stations:electric:ca station:1');
-response(`1) 1) "${pos[0][0]}"\n       2) "${pos[0][1]}"`)
+await response(`1) 1) "${pos[0][0]}"\n       2) "${pos[0][1]}"`, false)
 
 let dists = await command('GEOSEARCH stations:electric:ca FROMLONLAT -122.2612767 37.7936847 BYRADIUS 2 km WITHDIST');
-response(
+await response(
     `1) 1) "${dists[0][0]}"\n       2) "${dists[0][1]}"` +
-    `\n    2) 1) "${dists[1][0]}"\n       2) "${dists[1][1]}"`
+    `\n    2) 1) "${dists[1][0]}"\n       2) "${dists[1][1]}"`, false
 );
 
 int = await command('GEOADD stations:gas:ny -74.0376913 40.7383154 station:5');
-response(`(integer ${int})`);
+await response(`(integer ${int})`, false);
 
 let query = await command('SCAN 0 MATCH *:*:ny');
-response(
+await response(
     `1) "${query[0]}"` +
-    `\n    2) 1) "${query[1][0]}"\n       2) "${query[1][1]}"`
+    `\n    2) 1) "${query[1][0]}"\n       2) "${query[1][1]}"`, false
 );
+await response('');
 
 console.log('\n--> Removendo registro da base de dados');
 int = await command('DEL stations:gas:ny');
-response(`(integer ${int})`);
+await response(`(integer ${int})`);
 
 console.log('\n--> Listando o índice final da base');
 query = await command('SCAN 0');
-response(
+await response(
     `1) "${query[0]}"` +
     `\n    2) 1) "${query[1][0]}"\n       2) "${query[1][1]}"`
 );
 
-console.log('\n--> Encerrando conexão com o servidor')
+console.log('\n--> Encerrando conexão com o servidor');
 await client.quit();
