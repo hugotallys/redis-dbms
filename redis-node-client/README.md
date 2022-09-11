@@ -66,7 +66,7 @@ $ redis-cli
 (integer 1)
 127.0.0.1:6379> GEOADD stations:ca 122.26746 37.806234 station:2
 (integer 1)
-127.0.0.1:6379> GEOADD stations:ca -122.24698 37.810404 station:33
+127.0.0.1:6379> GEOADD stations:ca -122.24698 37.810404 station:3
 (integer 1)
 127.0.0.1:6379> GEOADD stations:ny -74.042402 40.718098 station:4
 (integer 1)
